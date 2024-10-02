@@ -32,7 +32,7 @@ class Utils:
             try:
                 return self.randomize(get_random_name(
                     combo=[NAMES, choice([ADJECTIVES, ANIMALS, COLORS, COUNTRIES, LANGUAGES, NAMES, STAR_WARS])],
-                    separator="").replace(" ", "") + (str(randint(0, 999)) if randint(0, 1) else ""))
+                    separator="").replace(" ", "") + (str(randint(0, 999)) if randint(0, 1) else "")) + "@outlook.com"
             except:
                 continue
 
@@ -45,12 +45,12 @@ class Timer:
         self.start_time = float
         self.now = float
 
-    def start(self, t: time.time()):
+    def start(self, t = time.time()):
         self.start_time = t
 
-    def reset(self, t: time.time()):
+    def reset(self, t = time.time()):
         self.start_time = t
 
-    def timer(self, t: time.time()):
+    def timer(self, t = time.time()):
         self.now = t - self.start_time
         return self.now

@@ -16,6 +16,7 @@
     "minBirthDate": 1980,
     "maxBirthDate": 1999,
     "PasswordLength": 10,
+    "UsernameLength": 10,
     "FirstNameLength": 5,
     "LastNameLength": 5
   },

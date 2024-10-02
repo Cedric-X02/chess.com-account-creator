@@ -28,10 +28,6 @@ from twocaptcha import TwoCaptcha
 from Utils import Utils, Timer
 from anycaptcha import AnycaptchaClient, FunCaptchaProxylessTask
 
-# Some Value
-eGenerated = 0
-solvedCaptcha = 0
-
 
 class AutoUpdater:
     def __init__(self, version):
@@ -137,31 +133,6 @@ class eGen:
         self.options.add_experimental_option('excludeSwitches', ['enable-logging'])
         self.options.add_experimental_option('useAutomationExtension', False)
 
-    def solver(self, site_url, browser):
-        # Solve Captcha Function
-        global solvedCaptcha
-        # TwoCaptcha
-        if self.providers == 'twocaptcha':
-            try:
-                return TwoCaptcha(self.api_key).funcaptcha(sitekey=self.site_key, url=site_url)['code']
-            except Exception as exp:
-                self.print(exp)
-
-            # AnyCaptcha
-        elif self.providers == 'anycaptcha':
-            client = AnycaptchaClient(self.api_key)
-            task = FunCaptchaProxylessTask(site_url, self.site_key)
-            job = client.createTask(task, typecaptcha="funcaptcha")
-            self.print("Solving funcaptcha")
-            job.join()
-            result = job.get_solution_response()
-            if result.find("ERROR") != -1:
-                self.print(result)
-                browser.quit()
-            else:
-                solvedCaptcha += 1
-                return result
-
     def check_proxy(self, proxy):
         with suppress(Exception):
             get("https://outlook.live.com", proxies={
@@ -183,24 +154,11 @@ class eGen:
         driver.quit()
         return
 
-    def get_balance(self):
-        # Check provider Balance Function
-        if self.providers == 'twocaptcha':
-            return TwoCaptcha(self.api_key).balance()
-        elif self.providers == 'anycaptcha':
-            return AnycaptchaClient(self.api_key).getBalance()
-
-    def update(self):
-        # Update Title Function
-        global eGenerated, solvedCaptcha
-        title = f'Email Generated: {eGenerated} | Solved Captcha: {solvedCaptcha} | Balance: {self.get_balance()}'
-        windll.kernel32.SetConsoleTitleW(title) if name == 'nt' else print(f'\33]0;{title}\a', end='',
-                                                                           flush=True)
-
     def generate_info(self):
         # Generate Information Function
         self.email = self.Utils.eGen()
         self.password = self.Utils.makeString(self.config["EmailInfo"]["PasswordLength"])  # Generate Password
+        self.username = self.Utils.makeString(self.config["EmailInfo"]["UsernameLength"])  # Generate Username
         self.first_name = self.Utils.makeString(self.config["EmailInfo"]["FirstNameLength"])  # Generate First Name
         self.last_name = self.Utils.makeString(self.config["EmailInfo"]["LastNameLength"])  # Generate Last Name
 
@@ -232,64 +190,46 @@ class eGen:
                                      '&8': Fore.LIGHTBLACK_EX,
                                      '&0': Fore.BLACK}), end=end)
 
-    def CreateEmail(self, driver: WebDriver):
+    def CreateAccount(self, driver: WebDriver):
         # Create Email Function
         try:
-            global eGenerated, solvedCaptcha
-            self.update()
             self.Timer.start(time()) if self.config["Common"]['Timer'] else ''
-            driver.get("https://outlook.live.com/owa/?nlp=1&signup=1")
+            driver.get("https://www.chess.com/register")
             assert 'Create' in driver.title
-            if self.config['EmailInfo']['Domain'] == "@hotmail.com":
-                domain = self.fElement(driver, By.ID, 'LiveDomainBoxList')
-                sleep(0.1)
-                domainObject = Select(domain)
-                domainObject.select_by_value('hotmail.com')
-            emailInput = self.fElement(driver, By.ID, 'usernameInput')
+
+            self.fElement(driver, By.CLASS_NAME, 'main-screen-button').click()
+            self.fElement(driver, By.CLASS_NAME, 'skill-level-button').click()
+
+            emailInput = self.fElement(driver, By.ID, 'registration_email')
             emailInput.send_keys(self.email)
-            self.print(f"email: {self.email}{self.config['EmailInfo']['Domain']}")
-            self.fElement(driver, By.ID, 'nextButton').click()
+            passwordInput = self.fElement(driver, By.ID, 'registration_password')
+            passwordInput.send_keys(self.password)
+            self.print(f"Email: {self.email}\nPassword: {self.password}")
+            sleep(15)
+
+            self.fElement(driver, By.CLASS_NAME, 'index-button').click()
+
             with suppress(Exception):
-                self.print(driver.find_element(By.ID, 'usernameInputError').text)
+                self.print(driver.find_element(By.CLASS_NAME, 'index-input-error').text)
                 self.print("email is already taken")
                 driver.quit()
                 return
-            passwordinput = self.fElement(driver, By.ID, 'Password')
-            passwordinput.send_keys(self.password)
-            self.print("Password: %s" % self.password)
-            self.fElement(driver, By.ID, 'nextButton').click()
-            first = self.fElement(driver, By.ID, "firstNameInput")
-            first.send_keys(self.first_name)
-            sleep(.3)
-            last = self.fElement(driver, By.ID, "lastNameInput")
-            last.send_keys(self.last_name)
-            self.fElement(driver, By.ID, 'nextButton').click()
-            dropdown = self.fElement(driver, By.ID, "countryRegionDropdown")
-            dropdown.find_element(By.XPATH, "//option[. = 'Turkey']").click()
-            birthMonth = self.fElement(driver, By.ID, "BirthMonth")
-            objectMonth = Select(birthMonth)
-            objectMonth.select_by_value(str(randint(1, 12)))
-            birthMonth = self.fElement(driver, By.ID, "BirthDay")
-            objectMonth = Select(birthMonth)
-            objectMonth.select_by_value(str(randint(1, 28)))
-            birthYear = self.fElement(driver, By.ID, "BirthYear")
-            birthYear.send_keys(
-                str(randint(self.config['EmailInfo']['minBirthDate'], self.config['EmailInfo']['maxBirthDate'])))
-            self.fElement(driver, By.ID, 'nextButton').click()
-            driver.switch_to.frame(self.fElement(driver, By.ID, 'enforcementFrame'))
-            token = self.solver(driver.current_url, self.driver)
-            sleep(0.5)
-            driver.execute_script(
-                'parent.postMessage(JSON.stringify({eventId:"challenge-complete",payload:{sessionToken:"' + token + '"}}),"*")')
-            self.print("&aCaptcha Solved")
-            self.update()
-            self.fElement(driver, By.ID, 'idBtn_Back').click()
-            self.print(f'Email Created in {str(self.Timer.timer(time())).split(".")[0]}s') if \
-                self.config["Common"]['Timer'] else self.print('Email Created')
-            eGenerated += 1
-            self.Utils.logger(self.email + self.config['EmailInfo']['Domain'], self.password)
-            self.update()
-            driver.quit()
+
+            usernameInput = self.fElement(driver, By.ID, 'registration_username')
+            usernameInput.send_keys(self.username)
+
+            self.fElement(driver, By.CLASS_NAME, 'cc-button-full').click()
+
+            with suppress(Exception):
+                self.print(driver.find_element(By.CLASS_NAME, 'username-input-error').text)
+                self.print("username is already taken")
+                driver.quit()
+                return
+            
+            self.fElement(driver, By.CLASS_NAME, 'theme-button')
+            self.fElement(driver, By.CLASS_NAME, 'friends-later')
+            self.fElement(driver, By.CLASS_NAME, 'trial-next')
+            self.fElement(driver, By.CLASS_NAME, 'notifications-link')
         except Exception as e:
             if e == KeyboardInterrupt:
                 driver.quit()
